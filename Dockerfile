@@ -21,6 +21,7 @@ ADD fuzzers/fuzz_numeric_newdecfromstr.go ./fuzzers/
 WORKDIR ./fuzzers/
 RUN go install github.com/dvyukov/go-fuzz/go-fuzz@latest github.com/dvyukov/go-fuzz/go-fuzz-build@latest
 #ENV GO111MODULE=off
+RUN go get github.com/dvyukov/go-fuzz/go-fuzz-dep
 RUN go get github.com/harmony-one/harmony/numeric
 RUN /root/go/bin/go-fuzz-build -libfuzzer -o fuzznewdecfrmstr.a
 RUN clang -fsanitize=fuzzer fuzznewdecfrmstr.a -o fuzz_newdecfromstr
