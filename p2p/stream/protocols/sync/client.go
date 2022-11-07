@@ -29,7 +29,6 @@ func (p *Protocol) GetBlocksByNumber(ctx context.Context, bns []uint64, opts ...
 		err = fmt.Errorf("number of blocks exceed cap of %v", GetBlocksByNumAmountCap)
 		return
 	}
-
 	req := newGetBlocksByNumberRequest(bns)
 	resp, stid, err := p.rm.DoRequest(ctx, req, opts...)
 	if err != nil {
@@ -158,7 +157,8 @@ func (req *getBlocksByNumberRequest) getBlocksFromResponse(resp sttypes.Response
 	blocks := make([]*types.Block, 0, len(blockBytes))
 	for i, bb := range blockBytes {
 		var block *types.Block
-		if err := rlp.DecodeBytes(bb, &block); err != nil {
+		var err error
+		if block, err = RlpDecodeBlockOrBlockWithSig(bb); err != nil {
 			return nil, errors.Wrap(err, "[GetBlocksByNumResponse]")
 		}
 		if block != nil {
@@ -167,6 +167,31 @@ func (req *getBlocksByNumberRequest) getBlocksFromResponse(resp sttypes.Response
 		blocks = append(blocks, block)
 	}
 	return blocks, nil
+}
+
+// BlockWithSig the serialization structure for request DownloaderRequest_BLOCKWITHSIG
+// The block is encoded as block + commit signature
+type BlockWithSig struct {
+	Block              *types.Block
+	CommitSigAndBitmap []byte
+}
+
+// RlpDecodeBlockOrBlockWithSig decode payload to types.Block or BlockWithSig.
+// Return the block with commitSig if set.
+func RlpDecodeBlockOrBlockWithSig(payload []byte) (*types.Block, error) {
+	var block *types.Block
+	if err := rlp.DecodeBytes(payload, &block); err == nil {
+		// received payload as *types.Block
+		return block, nil
+	}
+
+	var bws BlockWithSig
+	if err := rlp.DecodeBytes(payload, &bws); err == nil {
+		block := bws.Block
+		block.SetCurrentCommitSig(bws.CommitSigAndBitmap)
+		return block, nil
+	}
+	return nil, errors.New("failed to decode to either types.Block or BlockWithSig")
 }
 
 func (req *getBlocksByNumberRequest) parseBlockBytesAndSigs(resp *syncResponse) ([][]byte, [][]byte, error) {

@@ -171,7 +171,7 @@ func (sh *srHelper) doGetBlockHashesRequest(bns []uint64) ([]common.Hash, sttype
 }
 
 func (sh *srHelper) doGetBlocksByNumbersRequest(bns []uint64) ([]*types.Block, sttypes.StreamID, error) {
-	ctx, cancel := context.WithTimeout(sh.ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(sh.ctx, 10*time.Second)
 	defer cancel()
 
 	blocks, stid, err := sh.syncProtocol.GetBlocksByNumber(ctx, bns)

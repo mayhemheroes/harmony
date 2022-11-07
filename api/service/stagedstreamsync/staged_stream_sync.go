@@ -67,7 +67,6 @@ type Timing struct {
 
 type SyncCycle struct {
 	Number       uint64
-	StartHash    []byte
 	TargetHeight uint64
 	lock         sync.RWMutex
 }

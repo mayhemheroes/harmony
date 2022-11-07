@@ -107,10 +107,6 @@ func initDB(ctx context.Context, db kv.RwDB) error {
 		if err := tx.CreateBucket(GetStageName(name, false, false)); err != nil {
 			return err
 		}
-		// create bucket for beacon
-		if err := tx.CreateBucket(GetStageName(name, true, false)); err != nil {
-			return err
-		}
 	}
 	if err := tx.Commit(); err != nil {
 		return err

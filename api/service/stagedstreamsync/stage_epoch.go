@@ -5,7 +5,6 @@ import (
 
 	"github.com/harmony-one/harmony/core"
 	"github.com/harmony-one/harmony/internal/utils"
-	sttypes "github.com/harmony-one/harmony/p2p/stream/types"
 	"github.com/harmony-one/harmony/shard"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/pkg/errors"
@@ -92,7 +91,7 @@ func (sr *StageEpoch) doShortRangeSyncForEpochSync(s *StageState) (int, error) {
 		syncProtocol: s.state.protocol,
 		ctx:          srCtx,
 		config:       s.state.config,
-		logger:       utils.Logger().With().Str("mode", "short range").Logger(),
+		logger:       utils.Logger().With().Str("mode", "epoch chain short range").Logger(),
 	}
 
 	if err := sh.checkPrerequisites(); err != nil {
@@ -112,10 +111,31 @@ func (sr *StageEpoch) doShortRangeSyncForEpochSync(s *StageState) (int, error) {
 	if len(bns) == 0 {
 		return 0, nil
 	}
-	blocks, streamID, err := sh.getBlocksChain(bns)
+
+	////////////////////////////////////////////////////////
+	hashChain, whitelist, err := sh.getHashChain(bns)
 	if err != nil {
 		return 0, errors.Wrap(err, "getHashChain")
 	}
+	if len(hashChain) == 0 {
+
+		// short circuit for no sync is needed
+		return 0, nil
+	}
+	blocks, streamID, err := sh.getBlocksByHashes(hashChain, whitelist)
+	if err != nil {
+		utils.Logger().Warn().Err(err).Msg("epoch sync getBlocksByHashes failed")
+		if !errors.Is(err, context.Canceled) {
+			sh.removeStreams(whitelist) // Remote nodes cannot provide blocks with target hashes
+		}
+		return 0, errors.Wrap(err, "epoch sync getBlocksByHashes")
+	}
+	///////////////////////////////////////////////////////
+	// blocks, streamID, err := sh.getBlocksChain(bns)
+	// if err != nil {
+	// 	return 0, errors.Wrap(err, "getHashChain")
+	// }
+	///////////////////////////////////////////////////////
 	if len(blocks) == 0 {
 		// short circuit for no sync is needed
 		return 0, nil
@@ -123,11 +143,10 @@ func (sr *StageEpoch) doShortRangeSyncForEpochSync(s *StageState) (int, error) {
 	n, err := s.state.bc.InsertChain(blocks, true)
 	numBlocksInsertedShortRangeHistogramVec.With(s.state.promLabels()).Observe(float64(n))
 	if err != nil {
-		sh.removeStreams([]sttypes.StreamID{streamID}) // Data provided by remote nodes is corrupted
+		sh.removeStreams(streamID) // Data provided by remote nodes is corrupted
 		return n, err
 	}
 	utils.Logger().Info().Err(err).Int("blocks inserted", n).Msg("Insert block success")
-
 	return len(blocks), nil
 }
 

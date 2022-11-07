@@ -54,7 +54,7 @@ func (sr *StageShortRange) Exec(firstCycle bool, invalidBlockRevert bool, s *Sta
 		return nil
 	}
 
-	// doShortRangeSyncForEpochSync
+	// do short range sync
 	n, err := sr.doShortRangeSync(s)
 	s.state.inserted = n
 	if err != nil {
@@ -103,7 +103,7 @@ func (sr *StageShortRange) doShortRangeSync(s *StageState) (int, error) {
 	if err := sh.checkPrerequisites(); err != nil {
 		return 0, errors.Wrap(err, "prerequisite")
 	}
-	curBN := s.state.bc.CurrentBlock().NumberU64()
+	curBN := sr.configs.bc.CurrentBlock().NumberU64()
 	hashChain, whitelist, err := sh.getHashChain(sh.prepareBlockHashNumbers(curBN))
 	if err != nil {
 		return 0, errors.Wrap(err, "getHashChain")
@@ -137,7 +137,7 @@ func (sr *StageShortRange) doShortRangeSync(s *StageState) (int, error) {
 
 	utils.Logger().Info().Int("num blocks", len(blocks)).Msg("getBlockByHashes result")
 
-	n, err := verifyAndInsertBlocks(s.state.bc, blocks)
+	n, err := verifyAndInsertBlocks(sr.configs.bc, blocks)
 	numBlocksInsertedShortRangeHistogramVec.With(s.state.promLabels()).Observe(float64(n))
 	if err != nil {
 		utils.Logger().Warn().Err(err).Int("blocks inserted", n).Msg("Insert block failed")

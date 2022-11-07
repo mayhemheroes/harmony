@@ -64,7 +64,7 @@ func NewDownloader(host p2p.Host, bc core.BlockChain, config Config) *Downloader
 	logger := utils.Logger().With().Str("module", "StagedStreamSync").Uint32("ShardID", bc.ShardID()).Logger()
 
 	//TODO: use mem db should be in config file
-	stagedSyncInstance, err := CreateStagedSync(bc, true, sp, config, logger, true) //TODO: move logProgress to configs
+	stagedSyncInstance, err := CreateStagedSync(bc, false, sp, config, logger, true) //TODO: move logProgress to configs
 	if err != nil {
 		return nil
 	}
